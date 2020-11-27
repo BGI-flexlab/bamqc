@@ -32,7 +32,7 @@ public class ReferencePanelSite {
         String line;
         while ((line = bufferReader.readLine()) != null) {
             String[] field = line.trim().split("\t");
-            if(field.length == 2)
+            if(field.length != 2)
                 continue;
             site_vcf_map.put(field[0], field[1]);
         }

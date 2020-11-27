@@ -49,53 +49,51 @@ public class BamStats {
             System.out.println("[WARN] Non-standard header SortOrder value!");
         }
 
-        for (SAMSequenceRecord ssrec: header.getSequenceDictionary().getSequences()) {
-            boolean has_reads = false;
-            String chr = ssrec.getSequenceName();
-            int chr_len = ssrec.getSequenceLength();
-            int[] coverage = new int[chr_len];
-            SAMRecordIterator iter = reader.queryOverlapping(chr, 0, chr_len);
-            while(iter.hasNext()){
-                has_reads = true;
-                SAMRecord read = iter.next();
+        int chr_len;
+        int[] coverage = new int[0];
 
-                if(read.isSecondaryOrSupplementary()){
-                    numSecondaryAlignments++;
-                    if(!countSecondaryReads) continue;
-                }
-
-                //compute read size
-                int readSize = read.getReadLength();
-                totalBases += readSize;
-                if (readSize > maxReadSize) {
-                    maxReadSize = readSize;
-                }
-                if (readSize < minReadSize) {
-                    minReadSize = readSize;
-                }
-                totalReads++;
-
-                if(read.getDuplicateReadFlag()){
-                    duplicatedReads++;
-                    continue;
-                }
-
-                // accumulate only mapped reads
-                if(read.getReadUnmappedFlag()) {
-                    continue;
-                }
-                alignedReads++;
-
-                for(int i = read.getAlignmentStart(); i <= read.getAlignmentEnd(); i++){
-                    coverage[i]++;
-                }
+        String pre_chr = "";
+        for (SAMRecord read : reader) {
+            if(read.getContig() != null && !read.getContig().equals(pre_chr)){
+                chr_len = header.getSequenceDictionary().getSequence(read.getContig()).getSequenceLength();
+                if(!pre_chr.isEmpty())
+                    referencePanelSite.count_site_covered(read.getContig(), coverage);
+                coverage = new int[chr_len];
+                pre_chr = read.getContig();
             }
 
-            if(!has_reads)
-                continue;
+            if (read.isSecondaryOrSupplementary()) {
+                numSecondaryAlignments++;
+                if (!countSecondaryReads) continue;
+            }
 
-            referencePanelSite.count_site_covered(chr, coverage);
+            //compute read size
+            int readSize = read.getReadLength();
+            totalBases += readSize;
+            if (readSize > maxReadSize) {
+                maxReadSize = readSize;
+            }
+            if (readSize < minReadSize) {
+                minReadSize = readSize;
+            }
+            totalReads++;
+
+            if (read.getDuplicateReadFlag()) {
+                duplicatedReads++;
+                continue;
+            }
+
+            // accumulate only mapped reads
+            if (read.getReadUnmappedFlag()) {
+                continue;
+            }
+            alignedReads++;
+
+            for (int i = read.getAlignmentStart(); i <= read.getAlignmentEnd(); i++) {
+                coverage[i]++;
+            }
         }
+        referencePanelSite.count_site_covered(pre_chr, coverage);
 
         long overallTime = System.currentTimeMillis();
         System.out.println("Overall analysis time: " + (overallTime - startTime) / 1000);
