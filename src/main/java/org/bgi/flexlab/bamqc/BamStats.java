@@ -22,8 +22,8 @@ public class BamStats {
     private boolean countSecondaryReads;
 
     // read size
-    int maxReadSize;
-    int minReadSize;
+//    int maxReadSize;
+//    int minReadSize;
 
     long numSecondaryAlignments;
     long totalReads;
@@ -78,12 +78,12 @@ public class BamStats {
             //compute read size
             int readSize = read.getReadLength();
             totalBases += readSize;
-            if (readSize > maxReadSize) {
-                maxReadSize = readSize;
-            }
-            if (readSize < minReadSize) {
-                minReadSize = readSize;
-            }
+//            if (readSize > maxReadSize) {
+//                maxReadSize = readSize;
+//            }
+//            if (readSize < minReadSize) {
+//                minReadSize = readSize;
+//            }
             totalReads++;
 
             if (read.getDuplicateReadFlag()) {
@@ -102,36 +102,10 @@ public class BamStats {
             }
         }
         referencePanelSite.count_site_covered(pre_chr, coverage);
+        referencePanelSite.count_site_uncover_chrom();
 
         long overallTime = System.currentTimeMillis();
-        System.out.println("Overall analysis time: " + (overallTime - startTime) / 1000);
-    }
-
-    public long getTotalReads() {
-        return totalReads;
-    }
-
-    public long getTotalBases() {
-        return totalBases;
-    }
-
-    public float getAlignedReadsRatio() {
-        return (float) alignedReads/totalReads;
-    }
-
-    public float getDuplicatedReadsRatio() {
-        return (float) duplicatedReads/totalReads;
-    }
-
-    public String report() {
-        StringBuilder buf = new StringBuilder();
-        buf.append("Total Reads: ").append(alignedReads).append("\n");
-        buf.append("Total Bases: ").append(totalBases).append("\n");
-        buf.append("Aligned Reads ratio: ").append(getAlignedReadsRatio()).append("\n");
-        buf.append("Duplicated Reads ratio: ").append(getDuplicatedReadsRatio()).append("\n");
-        buf.append("Known Sites Covered: ").append(referencePanelSite.n_sites_covered).append("\n");
-        buf.append("Effective Coverage: ").append(referencePanelSite.getEffectiveCoverage()).append("\n");
-        return buf.toString();
+        System.out.println("Overall analysis time: " + (overallTime - startTime) / 1000 + " s");
     }
 
     private Pair<List<String>, List<String>> getReportResult() {
@@ -141,12 +115,12 @@ public class BamStats {
         values.add(Long.toString(totalReads));
         names.add("Total Bases");
         values.add(Long.toString(totalBases));
+        names.add("Known Sites Covered");
+        values.add(Long.toString(referencePanelSite.n_sites_covered));
         names.add("Aligned Reads ratio");
         values.add(StatsUtils.divide(alignedReads, totalReads));
         names.add("Duplicated Reads ratio");
         values.add(StatsUtils.divide(duplicatedReads, totalReads));
-        names.add("Known Sites Covered");
-        values.add(Long.toString(referencePanelSite.n_sites_covered));
         names.add("Effective Coverage");
         values.add(StatsUtils.divide(referencePanelSite.n_sites_covered, referencePanelSite.n_sites));
         return Pair.create(names, values);

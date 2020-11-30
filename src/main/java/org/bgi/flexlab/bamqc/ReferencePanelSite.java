@@ -39,6 +39,7 @@ public class ReferencePanelSite {
 
     public void count_site_covered(String chr, int[] coverage) {
         String site_vcf = site_vcf_map.get(chr);
+        site_vcf_map.remove(chr);
         VCFFileReader reader = new VCFFileReader(new File(site_vcf), false);
 
         for (VariantContext vc : reader) {
@@ -48,6 +49,16 @@ public class ReferencePanelSite {
         }
     }
 
+    public void count_site_uncover_chrom() {
+        VCFFileReader reader;
+
+        for(String chr: site_vcf_map.keySet()){
+            reader = new VCFFileReader(new File(site_vcf_map.get(chr)), false);
+            for (VariantContext vc : reader) {
+                n_sites++;
+            }
+        }
+    }
 
     public float getEffectiveCoverage() {
         return (float) this.n_sites_covered/this.n_sites;
