@@ -1,18 +1,16 @@
 package org.bgi.flexlab.bamqc;
 
-import htsjdk.samtools.util.CloseableIterator;
 import htsjdk.variant.variantcontext.VariantContext;
 import htsjdk.variant.vcf.VCFFileReader;
 
 import java.io.*;
 import java.util.HashMap;
 import java.util.Map;
-import java.util.zip.GZIPInputStream;
 
 public class ReferencePanelSite {
     Map<String, String> site_vcf_map;
-    int n_sites = 0;
-    int n_sites_covered = 0;
+    long n_sites = 0;
+    long n_sites_covered = 0;
 
 
     public ReferencePanelSite(String site_vcf_list) {

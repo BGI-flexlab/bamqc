@@ -1,12 +1,20 @@
 package org.bgi.flexlab.bamqc;
 
-import htsjdk.samtools.*;
+import htsjdk.samtools.SAMFileHeader;
+import htsjdk.samtools.SAMRecord;
+import htsjdk.samtools.SamReader;
+import htsjdk.samtools.SamReaderFactory;
+import org.bgi.flexlab.bamqc.util.Pair;
+import org.bgi.flexlab.bamqc.util.StatsUtils;
 
 import java.io.File;
+import java.io.FileWriter;
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 
 public class BamStats {
+    final private static String REPORT_HEADER = "## BGI-lowpass bam quality control, version 1.0\n";
 
     private String bamFile;
     private ReferencePanelSite referencePanelSite;
@@ -115,7 +123,6 @@ public class BamStats {
         return (float) duplicatedReads/totalReads;
     }
 
-
     public String report() {
         StringBuilder buf = new StringBuilder();
         buf.append("Total Reads: ").append(alignedReads).append("\n");
@@ -125,5 +132,48 @@ public class BamStats {
         buf.append("Known Sites Covered: ").append(referencePanelSite.n_sites_covered).append("\n");
         buf.append("Effective Coverage: ").append(referencePanelSite.getEffectiveCoverage()).append("\n");
         return buf.toString();
+    }
+
+    private Pair<List<String>, List<String>> getReportResult() {
+        final List<String> names = new ArrayList<>();
+        final List<String> values = new ArrayList<>();
+        names.add("Total Reads");
+        values.add(Long.toString(totalReads));
+        names.add("Total Bases");
+        values.add(Long.toString(totalBases));
+        names.add("Aligned Reads ratio");
+        values.add(StatsUtils.divide(alignedReads, totalReads));
+        names.add("Duplicated Reads ratio");
+        values.add(StatsUtils.divide(duplicatedReads, totalReads));
+        names.add("Known Sites Covered");
+        values.add(Long.toString(referencePanelSite.n_sites_covered));
+        names.add("Effective Coverage");
+        values.add(StatsUtils.divide(referencePanelSite.n_sites_covered, referencePanelSite.n_sites));
+        return Pair.create(names, values);
+    }
+
+    public String getReport() {
+        Pair<List<String>, List<String>> pair = getReportResult();
+        List<String> names = pair.getFirst();
+        List<String> values = pair.getSecond();
+        StringBuilder outString = new StringBuilder();
+
+        for (int i = 0; i < names.size(); i++) {
+            outString.append(String.format("%-37s", names.get(i)));
+            outString.append(":  ");
+            outString.append(values.get(i));
+            outString.append("\n");
+        }
+
+        return outString.toString();
+    }
+
+
+    public void writeReport(String outfile) throws IOException {
+        File report = new File(outfile);
+        FileWriter fileWritter = new FileWriter(report, false);
+        fileWritter.write(REPORT_HEADER);
+        fileWritter.write(getReport());
+        fileWritter.close();
     }
 }

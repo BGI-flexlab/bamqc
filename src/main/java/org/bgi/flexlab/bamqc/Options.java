@@ -9,12 +9,10 @@ import java.util.Properties;
 
 public class Options {
 
-    final String SOFTWARE_NAME = "vcfstats";
+    final String SOFTWARE_NAME = "bamqc";
     private boolean countSecondaryReads = false;
     private String infile;
-    private String outdir = null;
-    private String dbsnp;
-    private Float qual = 0.0f;
+    private String outfile;
     private String siteVcfList;
 
 
@@ -59,7 +57,7 @@ public class Options {
                 .longOpt("output")
                 .hasArg()
                 .argName("String")
-                .desc("report outdir [request]")
+                .desc("report file [request]")
                 .build());
         options.addOption(Option.builder("s")
                 .longOpt("site")
@@ -94,11 +92,7 @@ public class Options {
         infile = cmdLine.getOptionValue("input");
 
         if (cmdLine.hasOption("output")) {
-            outdir = cmdLine.getOptionValue("output");
-        }
-
-        if (cmdLine.hasOption("qual")) {
-            qual = Float.parseFloat(cmdLine.getOptionValue("qual", "0.0"));
+            outfile = cmdLine.getOptionValue("output");
         }
 
         if (cmdLine.hasOption("site")) {
@@ -114,16 +108,8 @@ public class Options {
         return infile;
     }
 
-    public String getOutdir() {
-        return outdir;
-    }
-
-    public String getDbsnp() {
-        return dbsnp;
-    }
-
-    public Float getQual() {
-        return qual;
+    public String getOutfile() {
+        return outfile;
     }
 
     public boolean isCountSecondaryReads() {
