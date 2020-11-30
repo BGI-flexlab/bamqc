@@ -24,12 +24,13 @@ public class BamStats {
     // read size
 //    int maxReadSize;
 //    int minReadSize;
-
-    long numSecondaryAlignments;
-    long totalReads;
-    long totalBases;
-    long alignedReads;
-    long duplicatedReads;
+    long referenceLength;
+    long n_sites_covered = 0;
+    long numSecondaryAlignments = 0;
+    long totalReads = 0;
+    long totalBases = 0;
+    long alignedReads = 0;
+    long duplicatedReads = 0;
 
     public BamStats(String bamFile, ReferencePanelSite referencePanelSite, boolean countSecondaryReads) {
         this.bamFile = bamFile;
@@ -42,10 +43,6 @@ public class BamStats {
         long startTime = System.currentTimeMillis();
         SamReader reader = SamReaderFactory.makeDefault().open(new File(bamFile));
 
-
-        // org.bioinfo.ntools.process header
-        String lastActionDone = "Loading sam header...";
-        System.out.println(lastActionDone);
         SAMFileHeader header = reader.getFileHeader();
 
         try {
@@ -57,16 +54,21 @@ public class BamStats {
             System.out.println("[WARN] Non-standard header SortOrder value!");
         }
 
+        referenceLength = header.getSequenceDictionary().getReferenceLength();
+
         int chr_len;
-        int[] coverage = new int[0];
+        boolean[] coverage = null;
 
         String pre_chr = "";
         for (SAMRecord read : reader) {
             if(read.getContig() != null && !read.getContig().equals(pre_chr)){
                 chr_len = header.getSequenceDictionary().getSequence(read.getContig()).getSequenceLength();
-                if(!pre_chr.isEmpty())
-                    referencePanelSite.count_site_covered(read.getContig(), coverage);
-                coverage = new int[chr_len];
+                if(!pre_chr.isEmpty()) {
+                    referencePanelSite.count_site_covered(pre_chr, coverage);
+                    count_coverage(coverage);
+                    System.out.println("Processing : " + pre_chr);
+                }
+                coverage = new boolean[chr_len+1];
                 pre_chr = read.getContig();
             }
 
@@ -97,12 +99,18 @@ public class BamStats {
             }
             alignedReads++;
 
-            for (int i = read.getAlignmentStart(); i <= read.getAlignmentEnd(); i++) {
-                coverage[i]++;
+            if(coverage != null){
+                for (int i = read.getAlignmentStart(); i <= read.getAlignmentEnd(); i++) {
+                    coverage[i]=true;
+                }
             }
         }
-        referencePanelSite.count_site_covered(pre_chr, coverage);
+        if(coverage != null){
+            count_coverage(coverage);
+            referencePanelSite.count_site_covered(pre_chr, coverage);
+        }
         referencePanelSite.count_site_uncover_chrom();
+        System.out.println("Processing : " + pre_chr);
 
         long overallTime = System.currentTimeMillis();
         System.out.println("Overall analysis time: " + (overallTime - startTime) / 1000 + " s");
@@ -115,14 +123,18 @@ public class BamStats {
         values.add(Long.toString(totalReads));
         names.add("Total Bases");
         values.add(Long.toString(totalBases));
+        names.add("Total Known Sites");
+        values.add(Long.toString(referencePanelSite.n_known_sites));
         names.add("Known Sites Covered");
-        values.add(Long.toString(referencePanelSite.n_sites_covered));
+        values.add(Long.toString(referencePanelSite.n_known_sites_covered));
+        names.add("Effective Coverage");
+        values.add(StatsUtils.realFormat(referencePanelSite.getEffectiveCoverage(), 2));
+        names.add("Coverage");
+        values.add(StatsUtils.divide(n_sites_covered, referenceLength));
         names.add("Aligned Reads ratio");
         values.add(StatsUtils.divide(alignedReads, totalReads));
         names.add("Duplicated Reads ratio");
         values.add(StatsUtils.divide(duplicatedReads, totalReads));
-        names.add("Effective Coverage");
-        values.add(StatsUtils.divide(referencePanelSite.n_sites_covered, referencePanelSite.n_sites));
         return Pair.create(names, values);
     }
 
@@ -149,5 +161,11 @@ public class BamStats {
         fileWritter.write(REPORT_HEADER);
         fileWritter.write(getReport());
         fileWritter.close();
+    }
+
+    public void count_coverage(boolean[] coverage){
+        for (boolean b : coverage) {
+            if (b) n_sites_covered++;
+        }
     }
 }
