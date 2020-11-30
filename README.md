@@ -1,5 +1,5 @@
 # bamqc
-BGI-lowpass bamqc
+BGI-lowpass bam quality control
 
 
 ### Usage
