@@ -8,7 +8,7 @@ public class Main {
         Options options = new Options(args);
         ReferencePanelSite rps = new ReferencePanelSite(options.getSiteVcfList());
         BamStats bamStats = new BamStats(options.getInfile(), rps, options.isCountSecondaryReads());
-        System.out.println("Start");
+        System.out.println("Start ...");
         bamStats.run();
         try {
             bamStats.writeReport(options.getOutfile());

@@ -26,6 +26,7 @@ public class BamStats {
 //    int minReadSize;
     long referenceLength;
     long n_sites_covered = 0;
+    long n_bases_mapped = 0;
     long numSecondaryAlignments = 0;
     long totalReads = 0;
     long totalBases = 0;
@@ -69,6 +70,7 @@ public class BamStats {
                     System.out.println("Processing : " + pre_chr);
                 }
                 coverage = new boolean[chr_len+1];
+                System.gc();
                 pre_chr = read.getContig();
             }
 
@@ -102,6 +104,7 @@ public class BamStats {
             if(coverage != null){
                 for (int i = read.getAlignmentStart(); i <= read.getAlignmentEnd(); i++) {
                     coverage[i]=true;
+                    n_bases_mapped+=1;
                 }
             }
         }
@@ -129,8 +132,10 @@ public class BamStats {
         values.add(Long.toString(referencePanelSite.n_known_sites_covered));
         names.add("Effective Coverage");
         values.add(StatsUtils.realFormat(referencePanelSite.getEffectiveCoverage(), 2));
-        names.add("Coverage");
+        names.add("Coverage 1X");
         values.add(StatsUtils.divide(n_sites_covered, referenceLength));
+        names.add("Mean Depth");
+        values.add(StatsUtils.divide(n_bases_mapped, referenceLength));
         names.add("Aligned Reads ratio");
         values.add(StatsUtils.divide(alignedReads, totalReads));
         names.add("Duplicated Reads ratio");
