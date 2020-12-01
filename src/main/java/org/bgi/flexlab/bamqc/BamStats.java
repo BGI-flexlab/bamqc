@@ -126,7 +126,9 @@ public class BamStats {
         values.add(Long.toString(totalReads));
         names.add("Total Bases");
         values.add(Long.toString(totalBases));
-        names.add("Total Known Sites");
+        names.add("Bases Deduplicated and Aligned");
+        values.add(Long.toString(n_bases_mapped));
+        names.add("Known Sites");
         values.add(Long.toString(referencePanelSite.n_known_sites));
         names.add("Known Sites Covered");
         values.add(Long.toString(referencePanelSite.n_known_sites_covered));
