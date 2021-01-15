@@ -1,9 +1,6 @@
 package org.bgi.flexlab.bamqc;
 
-import htsjdk.samtools.SAMFileHeader;
-import htsjdk.samtools.SAMRecord;
-import htsjdk.samtools.SamReader;
-import htsjdk.samtools.SamReaderFactory;
+import htsjdk.samtools.*;
 import org.bgi.flexlab.bamqc.util.Pair;
 import org.bgi.flexlab.bamqc.util.StatsUtils;
 
@@ -27,6 +24,10 @@ public class BamStats {
     long referenceLength;
     long n_sites_covered = 0;
     long n_bases_mapped = 0;
+    long n_bases_mapped_chrX = 0;
+    long n_bases_mapped_chrY = 0;
+    double chrY_cov = 0.0;
+    double XY_depth_ratio = 0.0;
     long numSecondaryAlignments = 0;
     long totalReads = 0;
     long totalBases = 0;
@@ -42,7 +43,7 @@ public class BamStats {
     public void run(){
 
         long startTime = System.currentTimeMillis();
-        SamReader reader = SamReaderFactory.makeDefault().open(new File(bamFile));
+        SamReader reader = SamReaderFactory.makeDefault().validationStringency(ValidationStringency.SILENT).open(new File(bamFile));
 
         SAMFileHeader header = reader.getFileHeader();
 
@@ -58,7 +59,13 @@ public class BamStats {
         referenceLength = header.getSequenceDictionary().getReferenceLength();
 
         int chr_len;
+        int chrX_len;
+        int chrY_len = 0;
+        double chrX_depth = 0;
+        double chrY_depth = 0;
         boolean[] coverage = null;
+        boolean is_chrX = false;
+        boolean is_chrY = false;
 
         String pre_chr = "";
         for (SAMRecord read : reader) {
@@ -66,13 +73,27 @@ public class BamStats {
                 chr_len = header.getSequenceDictionary().getSequence(read.getContig()).getSequenceLength();
                 if(!pre_chr.isEmpty()) {
                     referencePanelSite.count_site_covered(pre_chr, coverage);
-                    count_coverage(coverage);
+                    for (boolean b : coverage) if (b) n_sites_covered++;
                     System.out.println("Processing : " + pre_chr);
+                    if (pre_chr.endsWith("X")){
+                        chrX_len = header.getSequenceDictionary().getSequence(pre_chr).getSequenceLength();
+                        chrX_depth = (double)n_bases_mapped_chrX / chrX_len;
+                    }else if (pre_chr.endsWith("Y")){
+                        chrY_len = header.getSequenceDictionary().getSequence(pre_chr).getSequenceLength();
+                        chrY_depth = (double)n_bases_mapped_chrY / chrY_len;
+                        chrY_cov = count_coverage_chrY(coverage);
+                    }
                 }
                 coverage = new boolean[chr_len+1];
                 System.gc();
                 pre_chr = read.getContig();
+                is_chrX = pre_chr.endsWith("X");
+                is_chrY = pre_chr.endsWith("Y");
             }
+
+            int readSize = read.getReadLength();
+            if(is_chrX) n_bases_mapped_chrX +=readSize;
+            if(is_chrY) n_bases_mapped_chrY +=readSize;
 
             if (read.isSecondaryOrSupplementary()) {
                 numSecondaryAlignments++;
@@ -80,7 +101,6 @@ public class BamStats {
             }
 
             //compute read size
-            int readSize = read.getReadLength();
             totalBases += readSize;
 //            if (readSize > maxReadSize) {
 //                maxReadSize = readSize;
@@ -109,11 +129,20 @@ public class BamStats {
             }
         }
         if(coverage != null){
-            count_coverage(coverage);
+            for (boolean b : coverage) if (b) n_sites_covered++;
             referencePanelSite.count_site_covered(pre_chr, coverage);
+            if(is_chrY) {
+                chrY_cov = count_coverage_chrY(coverage);
+            }
         }
         referencePanelSite.count_site_uncover_chrom();
         System.out.println("Processing : " + pre_chr);
+
+        if(chrY_depth != 0){
+            XY_depth_ratio = chrX_depth / chrY_depth;
+        }else {
+            XY_depth_ratio = Double.MAX_VALUE;
+        }
 
         long overallTime = System.currentTimeMillis();
         System.out.println("Overall analysis time: " + (overallTime - startTime) / 1000 + " s");
@@ -142,6 +171,23 @@ public class BamStats {
         values.add(StatsUtils.divide(alignedReads, totalReads));
         names.add("Duplicated Reads ratio");
         values.add(StatsUtils.divide(duplicatedReads, totalReads));
+        names.add("Sex");
+        String sex_info = String.format("(%s,%s)", StatsUtils.realFormat(XY_depth_ratio, 2),
+                StatsUtils.realFormat(chrY_cov, 2));
+        if(XY_depth_ratio < 2)
+            values.add("M "+sex_info);
+        else if (XY_depth_ratio > 4.5)
+            values.add("F "+sex_info);
+        else {
+            double cov = (double)n_sites_covered / referenceLength;
+            double chrY_cov_ratio = cov/chrY_cov;
+            if(chrY_cov_ratio > 10)
+                values.add("F "+sex_info);
+            else
+                values.add("M "+sex_info);
+//            values.add("failure ("+StatsUtils.realFormat(XY_depth_ratio, 2) + ")");
+        }
+
         return Pair.create(names, values);
     }
 
@@ -171,8 +217,17 @@ public class BamStats {
     }
 
     public void count_coverage(boolean[] coverage){
-        for (boolean b : coverage) {
-            if (b) n_sites_covered++;
+        for (boolean b : coverage) if (b) n_sites_covered++;
+    }
+
+    public double count_coverage_chrY(boolean[] coverage){
+        int n_sites_covered_chrY = 0;
+        int chrY_size = coverage.length;
+        int i=2781479;
+        while (i < chrY_size - 330000) {
+            if (coverage[i]) n_sites_covered_chrY++;
+            i++;
         }
+        return (double)n_sites_covered_chrY / (chrY_size-2781479-330000);
     }
 }
