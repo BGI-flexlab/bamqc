@@ -4,15 +4,14 @@ import htsjdk.variant.variantcontext.VariantContext;
 import htsjdk.variant.vcf.VCFFileReader;
 
 import java.io.*;
-import java.util.HashMap;
-import java.util.Map;
+import java.util.*;
 
 public class ReferencePanelSite {
     /*
     we can compute the fraction of those n sites covered by at least one read fcovered
     and compute that sample’s effective coverage λeff = − ln(1 − fcovered)
      */
-    Map<String, String> site_vcf_map;
+    Map<String, List<String>> site_vcf_map;
     long n_known_sites = 0;
     long n_known_sites_covered = 0;
 
@@ -33,9 +32,29 @@ public class ReferencePanelSite {
         String line;
         while ((line = bufferReader.readLine()) != null) {
             String[] field = line.trim().split("\t");
-            if(field.length != 2)
-                continue;
-            site_vcf_map.put(field[0], field[1]);
+            String region = field[0];
+            String sites_file = field[1];
+            if(field.length != 2){
+                System.err.println("knowsites.vcf.list is bad!");
+                System.exit(1);
+            }
+            if(region.contains(":")){
+                String chr = region.split(":")[0];
+                if(!site_vcf_map.containsKey(chr)){
+                    List<String> sites = new ArrayList<>();
+                    sites.add(sites_file);
+                    site_vcf_map.put(chr, sites);
+                }else
+                    site_vcf_map.get(chr).add(sites_file);
+
+            }else {
+                if(!site_vcf_map.containsKey(region)){
+                    List<String> sites = new ArrayList<>();
+                    sites.add(sites_file);
+                    site_vcf_map.put(region, sites);
+                }else
+                    site_vcf_map.get(region).add(sites_file);
+            }
         }
         bufferReader.close();
     }
@@ -43,15 +62,27 @@ public class ReferencePanelSite {
     public void count_site_covered(String chr, boolean[] coverage) {
         if(!site_vcf_map.containsKey(chr)) return;
 
-        String site_vcf = site_vcf_map.get(chr);
-        VCFFileReader reader = new VCFFileReader(new File(site_vcf), false);
+        List<String> site_vcfs = site_vcf_map.get(chr);
+        Set<Integer> positions = new HashSet<>();
 
-        for (VariantContext vc : reader) {
-            if (coverage[vc.getStart()])
-                n_known_sites_covered++;
-            n_known_sites++;
+        for(String site_vcf : site_vcfs){
+            VCFFileReader reader = new VCFFileReader(new File(site_vcf), false);
+            for (VariantContext vc : reader) {
+                if(!chr.equals(vc.getContig())){
+                    System.err.println("[ERROR] site_vcf (" + site_vcf + ") has different chrom : " + vc.getContig());
+                    System.exit(2);
+                }
+
+                if(positions.contains(vc.getStart()))
+                    continue;
+                else
+                    positions.add(vc.getStart());
+
+                if (coverage[vc.getStart()])
+                    n_known_sites_covered++;
+                n_known_sites++;
+            }
         }
-
         site_vcf_map.remove(chr);
     }
 
@@ -59,9 +90,12 @@ public class ReferencePanelSite {
         VCFFileReader reader;
 
         for(String chr: site_vcf_map.keySet()){
-            reader = new VCFFileReader(new File(site_vcf_map.get(chr)), false);
-            for (VariantContext vc : reader) {
-                n_known_sites++;
+            List<String> site_vcfs = site_vcf_map.get(chr);
+            for(String site_vcf : site_vcfs) {
+                reader = new VCFFileReader(new File(site_vcf), false);
+                for (VariantContext vc : reader) {
+                    n_known_sites++;
+                }
             }
         }
     }

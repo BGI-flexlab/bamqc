@@ -6,7 +6,7 @@
 
     <groupId>org.bgi.flexlab</groupId>
     <artifactId>bamqc</artifactId>
-    <version>1.0</version>
+    <version>1.1</version>
 
     <build>
         <resources>
@@ -60,8 +60,6 @@
     </dependencies>
     <packaging>jar</packaging>
     <name>bamqc</name>
-
-
 
     <properties>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>

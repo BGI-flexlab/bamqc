@@ -14,6 +14,7 @@ public class Options {
     private String infile;
     private String outfile;
     private String siteVcfList;
+    private String appVersion;
 
 
     SimpleDateFormat df = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");//设置日期格式
@@ -33,7 +34,7 @@ public class Options {
     private String helpHeader() {
         StringBuilder sb = new StringBuilder();
         sb.append("\nVersion     : ");
-        sb.append(getAppVersion());
+        sb.append(appVersion);
         sb.append("\nAuthor      : huangzhibo@genomics.cn");
         sb.append("\nCompile Date: ");
         sb.append(compile_date);
@@ -43,6 +44,7 @@ public class Options {
     }
 
     public void parse(String[] args) {
+        setAppVersion();
         String header = helpHeader();
         String footer = "\nPlease report issues at https://github.com/BGI-flexlab/bamqc/issues";
 
@@ -116,8 +118,7 @@ public class Options {
         return countSecondaryReads;
     }
 
-    public static String getAppVersion() {
-        String appVersion = "NA";
+    public void setAppVersion() {
         Properties properties = new Properties();
         try {
             properties.load(Options.class.getClassLoader().getResourceAsStream("app.properties"));
@@ -127,6 +128,9 @@ public class Options {
         } catch (IOException e) {
             e.printStackTrace();
         }
+    }
+
+    public String getAppVersion() {
         return appVersion;
     }
 

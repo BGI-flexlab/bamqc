@@ -11,7 +11,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 public class BamStats {
-    final private static String REPORT_HEADER = "## BGI-lowpass bam quality control, version 1.0\n";
+    final private static String REPORT_HEADER = "## BGI-lowpass bam quality control, version ";
 
     private String bamFile;
     private ReferencePanelSite referencePanelSite;
@@ -50,10 +50,10 @@ public class BamStats {
         try {
             SAMFileHeader.SortOrder sortOrder = header.getSortOrder();
             if (sortOrder != SAMFileHeader.SortOrder.coordinate) {
-                System.out.println("[WARN] According to header the BAM file is not sorted by coordinate!");
+                System.err.println("[WARN] According to header the BAM file is not sorted by coordinate!");
             }
         } catch (IllegalArgumentException ex) {
-            System.out.println("[WARN] Non-standard header SortOrder value!");
+            System.err.println("[WARN] Non-standard header SortOrder value!");
         }
 
         referenceLength = header.getSequenceDictionary().getReferenceLength();
@@ -74,7 +74,7 @@ public class BamStats {
                 if(!pre_chr.isEmpty()) {
                     referencePanelSite.count_site_covered(pre_chr, coverage);
                     for (boolean b : coverage) if (b) n_sites_covered++;
-                    System.out.println("Processing : " + pre_chr);
+                    System.err.println("Processing finished: " + pre_chr);
                     if (pre_chr.endsWith("X")){
                         chrX_len = header.getSequenceDictionary().getSequence(pre_chr).getSequenceLength();
                         chrX_depth = (double)n_bases_mapped_chrX / chrX_len;
@@ -84,6 +84,7 @@ public class BamStats {
                         chrY_cov = count_coverage_chrY(coverage);
                     }
                 }
+                System.err.println("Processing   ...   : " + read.getContig());
                 coverage = new boolean[chr_len+1];
                 System.gc();
                 pre_chr = read.getContig();
@@ -110,17 +111,14 @@ public class BamStats {
 //            }
             totalReads++;
 
+            // accumulate only mapped reads
+            if (read.getReadUnmappedFlag()) continue;
+            alignedReads++;
+
             if (read.getDuplicateReadFlag()) {
                 duplicatedReads++;
                 continue;
             }
-
-            // accumulate only mapped reads
-            if (read.getReadUnmappedFlag()) {
-                continue;
-            }
-            alignedReads++;
-
             if(coverage != null){
                 for (int i = read.getAlignmentStart(); i <= read.getAlignmentEnd(); i++) {
                     coverage[i]=true;
@@ -136,16 +134,16 @@ public class BamStats {
             }
         }
         referencePanelSite.count_site_uncover_chrom();
-        System.out.println("Processing : " + pre_chr);
+        System.err.println("Processing finished: " + pre_chr);
 
         if(chrY_depth != 0){
             XY_depth_ratio = chrX_depth / chrY_depth;
         }else {
-            XY_depth_ratio = Double.MAX_VALUE;
+            XY_depth_ratio = 1000;
         }
 
         long overallTime = System.currentTimeMillis();
-        System.out.println("Overall analysis time: " + (overallTime - startTime) / 1000 + " s");
+        System.err.println("Overall analysis time: " + (overallTime - startTime) / 1000 + " s");
     }
 
     private Pair<List<String>, List<String>> getReportResult() {
@@ -208,10 +206,10 @@ public class BamStats {
     }
 
 
-    public void writeReport(String outfile) throws IOException {
+    public void writeReport(String outfile, String appVersion) throws IOException {
         File report = new File(outfile);
         FileWriter fileWritter = new FileWriter(report, false);
-        fileWritter.write(REPORT_HEADER);
+        fileWritter.write(REPORT_HEADER + appVersion + "\n");
         fileWritter.write(getReport());
         fileWritter.close();
     }
@@ -221,6 +219,17 @@ public class BamStats {
     }
 
     public double count_coverage_chrY(boolean[] coverage){
+        int n_sites_covered_chrY = 0;
+        int chrY_size = coverage.length;
+        int i=0;
+        while (i < chrY_size) {
+            if (coverage[i]) n_sites_covered_chrY++;
+            i++;
+        }
+        return (double)n_sites_covered_chrY / chrY_size;
+    }
+
+    public double count_coverage_chrY_humam(boolean[] coverage){
         int n_sites_covered_chrY = 0;
         int chrY_size = coverage.length;
         int i=2781479;

@@ -11,7 +11,7 @@ public class Main {
         System.out.println("Start ...");
         bamStats.run();
         try {
-            bamStats.writeReport(options.getOutfile());
+            bamStats.writeReport(options.getOutfile(), options.getAppVersion());
         } catch (IOException e) {
             e.printStackTrace();
         }
