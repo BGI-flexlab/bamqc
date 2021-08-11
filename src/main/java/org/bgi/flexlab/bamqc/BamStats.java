@@ -153,7 +153,7 @@ public class BamStats {
         values.add(Long.toString(totalReads));
         names.add("Total Bases");
         values.add(Long.toString(totalBases));
-        names.add("Bases Deduplicated and Aligned");
+        names.add("Bases Deduplicated and Mapped");
         values.add(Long.toString(n_bases_mapped));
         names.add("Known Sites");
         values.add(Long.toString(referencePanelSite.n_known_sites));
@@ -161,13 +161,13 @@ public class BamStats {
         values.add(Long.toString(referencePanelSite.n_known_sites_covered));
         names.add("Effective Coverage");
         values.add(StatsUtils.realFormat(referencePanelSite.getEffectiveCoverage(), 2));
+        names.add("Average Depth");
+        values.add(StatsUtils.divide(n_bases_mapped, referenceLength));
         names.add("Coverage 1X");
         values.add(StatsUtils.divide(n_sites_covered, referenceLength));
-        names.add("Mean Depth");
-        values.add(StatsUtils.divide(n_bases_mapped, referenceLength));
-        names.add("Aligned Reads ratio");
+        names.add("Mapping Rate");
         values.add(StatsUtils.divide(alignedReads, totalReads));
-        names.add("Duplicated Reads ratio");
+        names.add("Duplication Rate");
         values.add(StatsUtils.divide(duplicatedReads, totalReads));
         names.add("Sex");
         String sex_info = String.format("(%s,%s)", StatsUtils.realFormat(XY_depth_ratio, 2),
